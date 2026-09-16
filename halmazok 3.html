@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halmazok - Elmélet és Interaktív Feladatok</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Dinamikus, mozgó háttér */
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #31103f, #0f2b38);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Központi cím */
+        .center-title {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+            z-index: 10;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 15px 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Kétoldalas konténer */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 62vh;
+            display: flex;
+        }
+
+        .side-zone {
+            position: relative;
+            width: 50%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .zone-label {
+            position: absolute;
+            top: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 5px 15px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .left-zone .zone-label { left: 20px; color: #38bdf8; }
+        .right-zone .zone-label { right: 20px; color: #facc15; }
+
+        /* Egyedi buborék */
+        .bubble {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 0.78rem;
+            font-weight: bold;
+            padding: 8px;
+            cursor: pointer;
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.5), 
+                        0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .bubble:hover {
+            transform: scale(1.15);
+            box-shadow: inset 0 0 25px rgba(255, 255, 255, 0.9), 
+                        0 0 25px rgba(255, 255, 255, 0.6);
+            z-index: 20;
+        }
+
+        /* Információs panel alul */
+        #info-panel {
+            width: 90%;
+            max-width: 950px;
+            height: 33vh;
+            background: rgba(30, 41, 59, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px 15px 0 0;
+            padding: 15px 25px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+            margin-bottom: 0;
+        }
+
+        #info-panel h2 {
+            margin-bottom: 6px;
+            font-size: 1.2rem;
+        }
+
+        #info-panel p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+
+        .hint {
+            color: #94a3b8;
+            font-style: italic;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        /* Interaktív mezők és gombok */
+        .interactive-box {
+            margin-top: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .interactive-box input {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+            width: 220px;
+        }
+
+        .interactive-box input:focus {
+            border-color: #38bdf8;
+        }
+
+        .check-btn {
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .check-btn:hover {
+            background: #0ea5e9;
+        }
+
+        .feedback {
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Középső felirat -->
+    <div class="center-title">Halmazok tulajdonságai</div>
+
+    <!-- Kétoldalas mozgó buborékok tere -->
+    <div id="canvas-container">
+        <!-- Bal oldal: Elmélet + Példa -->
+        <div class="side-zone left-zone" id="left-zone">
+            <div class="zone-label">📖 Elmélet & Példák</div>
+        </div>
+        <!-- Jobb oldal: Interaktív Feladatok -->
+        <div class="side-zone right-zone" id="right-zone">
+            <div class="zone-label">✍️ Interaktív Feladatok</div>
+        </div>
+    </div>
+
+    <!-- Alsó információs doboz -->
+    <div id="info-panel">
+        <p class="hint">👆 Kattints a bal oldalon az elméletre, vagy a jobb oldalon az interaktív feladatokra!</p>
+    </div>
+
+    <script>
+        // ADATOK: Minden elméleti fogalomhoz tartozik egy pár (bal: elmélet, jobb: interaktív feladat)
+        const elemek = [
+            {
+                id: "reszhalmaz",
+                nev: "Részhalmaz",
+                szinElmelet: "radial-gradient(circle at 30% 30%, #ff7675, #d63031)",
+                szinFeladat: "radial-gradient(circle at 30% 30%, #fab1a0, #e17055)",
+                elmeletLeiras: "Az A halmaz részhalmaza a B-nek ($A \\subset B$), ha az A minden eleme egyben a B halmaznak is eleme.",
+                elmeletPelda: "Példa: Ha $A = \\{2, 4\\}$ és $B = \\{1, 2, 3, 4, 5\\}$, akkor $A$ részhalmaza $B$-nek.",
+                feladatKerd: "Részhalmaza-e a $\\{3, 5\\}$ halmaz a $\\{1, 3, 5, 7\\}$ halmaznak? (Írd be: igen / nem)",
+                helyesValasz: "igen"
+            },
+            {
+                id: "egyenloseg",
+                nev: "Egyenlőség",
+                szinElmelet: "radial-gradient(circle at 30% 30%, #74b9ff, #0984e3)",
+                szinFeladat: "radial-gradient(circle at 30% 30%, #a29bfe, #6c5ce7)",
+                elmeletLeiras: "Két halmaz egyenlő, ha pontosan ugyanazokat az elemeket tartalmazzák ($A = B$). A sorrend nem számít.",
+                elmeletPelda: "Példa: $A = \\{1, 2, 3\\}$ és $B = \\{3, 1, 2\\}$ egyenlő halmazok.",
+                feladatKerd: "Egyenlő-e a $\\{a, b, c\\}$ és a $\\{b, c, a, b\\}$ halmaz? (Írd be: igen / nem)",
+                helyesValasz: "igen"
+            },
+            {
+                id: "unio",
+                nev: "Unió",
+                szinElmelet: "radial-gradient(circle at 30% 30%, #55efc4, #00b894)",
+                szinFeladat: "radial-gradient(circle at 30% 30%, #fd79a8, #e84393)",
+                elmeletLeiras: "Két halmaz uniója ($A \\cup B$) azok az elemek, amelyek legalább az egyik halmaznak elemei.",
+                elmeletPelda: "Példa: Ha $A = \\{1, 2\\}$ és $B = \\{2, 3\\}$, akkor $A \\cup B = \\{1, 2, 3\\}$.",
+                feladatKerd: "Add meg a $\\{1, 2\\}$ és $\\{2, 3\\}$ unióját! (Formátum: 1,2,3 vagy {1,2,3})",
+                helyesValaszok: ["1,2,3", "{1,2,3}", "1, 2, 3", "{1, 2, 3}"]
+            },
+            {
+                id: "metszet",
+                nev: "Metszet",
+                szinElmelet: "radial-gradient(circle at 30% 30%, #ffeaa7, #fdcb6e)",
+                szinFeladat: "radial-gradient(circle at 30% 30%, #fdcb6e, #d35400)",
+                elmeletLeiras: "Két halmaz metszete ($A \\cap B$) azoknak az elemeknek a halmaza, amelyek mindkét halmazban benne vannak.",
+                elmeletPelda: "Példa: Ha $A = \\{1, 2, 3\\}$ és $B = \\{2, 3, 4\\}$, akkor $A \\cap B = \\{2, 3\\}$.",
+                feladatKerd: "Mennyi a $\\{1, 2, 3\\}$ és $\\{4, 5\\}$ metszete? (Ha üres, írd be: üres vagy {} )",
+                helyesValaszok: ["üres", "ures", "{}", "∅", "ures halmaz"]
+            }
+        ];
+
+        const leftZone = document.getElementById('left-zone');
+        const rightZone = document.getElementById('right-zone');
+        const infoPanel = document.getElementById('info-panel');
+        const bubbles = [];
+
+        function initApp() {
+            // Bal oldali elméleti buborékok
+            elemek.forEach((item, index) => {
+                createBubble(item, leftZone, 'left', index);
+            });
+
+            // Jobb oldali feladat buborékok
+            elemek.forEach((item, index) => {
+                createBubble(item, rightZone, 'right', index);
+            });
+
+            requestAnimationFrame(animateBubbles);
+        }
+
+        function createBubble(item, zoneElement, side, index) {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            if (side === 'left') {
+                bubble.innerText = item.nev + "\n(Elmélet)";
+                bubble.style.background = item.szinElmelet;
+            } else {
+                bubble.innerText = item.nev + "\n(Feladat)";
+                bubble.style.background = item.szinFeladat;
+            }
+
+            const w = zoneElement.clientWidth;
+            const h = zoneElement.clientHeight;
+
+            let posX = Math.random() * (w - 110) + 10;
+            let posY = Math.random() * (h - 120) + 45;
+
+            bubble.style.left = posX + 'px';
+            bubble.style.top = posY + 'px';
+
+            const speed = 0.5 + Math.random() * 0.8;
+            const angle = Math.random() * Math.PI * 2;
+            
+            const bubbleObj = {
+                element: bubble,
+                zone: zoneElement,
+                x: posX,
+                y: posY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                width: 100,
+                height: 100,
+                item: item,
+                side: side
+            };
+
+            bubble.addEventListener('click', () => {
+                if (side === 'left') {
+                    showElmelet(item);
+                } else {
+                    showFeladat(item);
+                }
+            });
+
+            zoneElement.appendChild(bubble);
+            bubbles.push(bubbleObj);
+        }
+
+        function showElmelet(item) {
+            infoPanel.innerHTML = `
+                <h2 style="color: #38bdf8;">📖 Elmélet: ${item.nev}</h2>
+                <p><strong>Definíció:</strong> ${item.elmeletLeiras}</p>
+                <p style="margin-top: 6px; color: #cbd5e1;">${item.elmeletPelda}</p>
+            `;
+        }
+
+        function showFeladat(item) {
+            infoPanel.innerHTML = `
+                <h2 style="color: #facc15;">✍️ Interaktív Feladat: ${item.nev}</h2>
+                <p><strong>Kérdés:</strong> ${item.feladatKerd}</p>
+                <div class="interactive-box">
+                    <input type="text" id="user-answer" placeholder="Ide írd a választ...">
+                    <button class="check-btn" onclick="checkAnswer('${item.id}')">Ellenőrzés</button>
+                </div>
+                <div id="feedback-area" class="feedback"></div>
+            `;
+        }
+
+        window.checkAnswer = function(itemId) {
+            const item = elemek.find(i => i.id === itemId);
+            const valaszInput = document.getElementById('user-answer').value.trim().toLowerCase();
+            const feedbackArea = document.getElementById('feedback-area');
+
+            let helyes = false;
+            if (item.helyesValasz) {
+                if (valaszInput === item.helyesValasz.toLowerCase()) helyes = true;
+            } else if (item.helyesValaszok) {
+                if (item.helyesValaszok.map(v => v.toLowerCase()).includes(valaszInput)) helyes = true;
+            }
+
+            if (helyes) {
+                feedbackArea.style.color = "#4ade80";
+                feedbackArea.innerHTML = "🎉 Helyes válasz, szép munka!";
+            } else {
+                feedbackArea.style.color = "#f87171";
+                feedbackArea.innerHTML = "❌ Nem teljesen jó, próbáld újra!";
+            }
+        };
+
+        function animateBubbles() {
+            bubbles.forEach(b => {
+                const w = b.zone.clientWidth;
+                const h = b.zone.clientHeight;
+
+                b.x += b.vx;
+                b.y += b.vy;
+
+                if (b.x <= 0 || b.x >= w - b.width) {
+                    b.vx *= -1;
+                    b.x = Math.max(0, Math.min(b.x, w - b.width));
+                }
+                if (b.y <= 45 || b.y >= h - b.height) {
+                    b.vy *= -1;
+                    b.y = Math.max(45, Math.min(b.y, h - b.height));
+                }
+
+                b.element.style.left = b.x + 'px';
+                b.element.style.top = b.y + 'px';
+            });
+
+            requestAnimationFrame(animateBubbles);
+        }
+
+        window.addEventListener('load', initApp);
+    </script>
+</body>
+</html>
